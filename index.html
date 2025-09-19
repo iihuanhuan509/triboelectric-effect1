@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>摩擦起电 - 互动教学实验</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <i class="fas fa-bolt"></i>
+                <h1>摩擦起电</h1>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="#principles">物理原理</a></li>
+                <li><a href="#experiments">实验方案</a></li>
+                <li><a href="#simulator">互动模拟</a></li>
+                <li><a href="#life-examples">生活现象</a></li>
+            </ul>
+            <div class="hamburger">
+                <span class="bar"></span>
+                <span class="bar"></span>
+                <span class="bar"></span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主页面内容 -->
+    <main>
+        <!-- 英雄区域 -->
+        <section class="hero">
+            <div class="hero-content">
+                <h2>探索摩擦起电的奥秘</h2>
+                <p>通过互动实验和可视化动画，深入理解静电现象的物理原理</p>
+                <div class="hero-stats">
+                    <div class="stat">
+                        <i class="fas fa-flask"></i>
+                        <span class="stat-number">14</span>
+                        <span class="stat-label">实验方案</span>
+                    </div>
+                    <div class="stat">
+                        <i class="fas fa-atom"></i>
+                        <span class="stat-number">1</span>
+                        <span class="stat-label">核心原理</span>
+                    </div>
+                    <div class="stat">
+                        <i class="fas fa-gamepad"></i>
+                        <span class="stat-number">多个</span>
+                        <span class="stat-label">互动游戏</span>
+                    </div>
+                </div>
+            </div>
+            <div class="hero-animation">
+                <div class="electron-orbit">
+                    <div class="electron e1"></div>
+                    <div class="electron e2"></div>
+                    <div class="electron e3"></div>
+                    <div class="nucleus">+</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 物理原理部分 -->
+        <section id="principles" class="principles-section">
+            <div class="container">
+                <h2 class="section-title">
+                    <i class="fas fa-atom"></i>
+                    物理原理
+                </h2>
+                <div class="principles-content">
+                    <div class="principle-card">
+                        <h3>电子束缚力差异</h3>
+                        <p>不同物质的原子核对核外电子的束缚力大小不同，这是摩擦起电现象的根本原因。</p>
+                        <div class="atom-model" id="atomModel1">
+                            <div class="nucleus-strong">
+                                <span>强束缚核</span>
+                            </div>
+                            <div class="electrons-strong">
+                                <div class="electron-strong"></div>
+                                <div class="electron-strong"></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="principle-card">
+                        <h3>电子转移过程</h3>
+                        <p>摩擦时，束缚力较小的物体失去电子带正电，束缚力较大的物体得到电子带负电。</p>
+                        <div class="transfer-animation" id="transferAnimation">
+                            <div class="material material-a">
+                                <span>物质A</span>
+                                <div class="charge-indicator">+</div>
+                            </div>
+                            <div class="electron-transfer">
+                                <div class="moving-electron">e⁻</div>
+                            </div>
+                            <div class="material material-b">
+                                <span>物质B</span>
+                                <div class="charge-indicator">-</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="principle-card">
+                        <h3>静电吸引力</h3>
+                        <p>带电体具有吸引轻小物体的性质，带电量越多，吸引力越强。</p>
+                        <div class="attraction-demo" id="attractionDemo">
+                            <div class="charged-object">
+                                <i class="fas fa-magnet"></i>
+                                <span>带电体</span>
+                            </div>
+                            <div class="small-objects">
+                                <div class="small-object">纸屑</div>
+                                <div class="small-object">头发</div>
+                                <div class="small-object">塑料片</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 实验方案部分 -->
+        <section id="experiments" class="experiments-section">
+            <div class="container">
+                <h2 class="section-title">
+                    <i class="fas fa-flask"></i>
+                    实验方案库
+                </h2>
+                <div class="experiments-grid" id="experimentsGrid">
+                    <!-- 实验卡片将通过JavaScript动态生成 -->
+                </div>
+            </div>
+        </section>
+
+        <!-- 互动模拟器部分 -->
+        <section id="simulator" class="simulator-section">
+            <div class="container">
+                <h2 class="section-title">
+                    <i class="fas fa-gamepad"></i>
+                    互动模拟器
+                </h2>
+                <div class="simulator-content">
+                    <div class="simulator-card">
+                        <h3>摩擦起电模拟器</h3>
+                        <p>选择不同材料进行摩擦，观察电荷转移过程</p>
+                        <div class="friction-simulator" id="frictionSimulator">
+                            <div class="materials-selector">
+                                <div class="material-option" data-material="silk">
+                                    <i class="fas fa-leaf"></i>
+                                    <span>丝绸</span>
+                                </div>
+                                <div class="material-option" data-material="plastic">
+                                    <i class="fas fa-square"></i>
+                                    <span>塑料</span>
+                                </div>
+                                <div class="material-option" data-material="glass">
+                                    <i class="fas fa-gem"></i>
+                                    <span>玻璃</span>
+                                </div>
+                                <div class="material-option" data-material="rubber">
+                                    <i class="fas fa-circle"></i>
+                                    <span>橡胶</span>
+                                </div>
+                            </div>
+                            <div class="vs-indicator">VS</div>
+                            <div class="materials-selector">
+                                <div class="material-option" data-material="wool">
+                                    <i class="fas fa-tshirt"></i>
+                                    <span>毛织物</span>
+                                </div>
+                                <div class="material-option" data-material="hair">
+                                    <i class="fas fa-user"></i>
+                                    <span>头发</span>
+                                </div>
+                                <div class="material-option" data-material="foam">
+                                    <i class="fas fa-square"></i>
+                                    <span>泡沫</span>
+                                </div>
+                                <div class="material-option" data-material="metal">
+                                    <i class="fas fa-coins"></i>
+                                    <span>金属</span>
+                                </div>
+                            </div>
+                        </div>
+                        <button class="simulate-btn" id="simulateBtn">
+                            <i class="fas fa-play"></i>
+                            开始摩擦
+                        </button>
+                        <div class="result-display" id="resultDisplay"></div>
+                    </div>
+
+                    <div class="simulator-card">
+                        <h3>静电吸引测试</h3>
+                        <p>测试不同带电量对吸引力的影响</p>
+                        <div class="attraction-tester" id="attractionTester">
+                            <div class="charge-slider">
+                                <label for="chargeRange">调节电荷量：</label>
+                                <input type="range" id="chargeRange" min="0" max="100" value="50">
+                                <span id="chargeValue">50</span>
+                            </div>
+                            <div class="test-area">
+                                <div class="charged-rod" id="chargedRod">
+                                    <i class="fas fa-magic"></i>
+                                    <span class="charge-display">+</span>
+                                </div>
+                                <div class="test-objects">
+                                    <div class="test-object paper" id="paperPiece">纸片</div>
+                                    <div class="test-object hair-strand" id="hairStrand">头发</div>
+                                    <div class="test-object plastic-bit" id="plasticBit">塑料屑</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 生活现象部分 -->
+        <section id="life-examples" class="life-examples-section">
+            <div class="container">
+                <h2 class="section-title">
+                    <i class="fas fa-lightbulb"></i>
+                    生活中的静电现象
+                </h2>
+                <div class="examples-content">
+                    <div class="example-card">
+                        <div class="example-icon">
+                            <i class="fas fa-tshirt"></i>
+                        </div>
+                        <h3>脱毛衣的火花</h3>
+                        <p><strong>现象：</strong>在黑暗处脱毛衣时，看到小火花，听到噼啪声</p>
+                        <p><strong>原理：</strong>毛衣与内衬摩擦产生静电，当电压足够高时，空气被击穿产生放电现象</p>
+                        <div class="spark-demo" id="sparkDemo">
+                            <div class="sweater">毛衣</div>
+                            <div class="spark-effect"></div>
+                            <div class="inner-wear">内衬</div>
+                        </div>
+                        <button class="demo-btn" onclick="playSparkDemo()">
+                            <i class="fas fa-play"></i>
+                            演示过程
+                        </button>
+                    </div>
+
+                    <div class="example-card">
+                        <div class="example-icon">
+                            <i class="fas fa-magnet"></i>
+                        </div>
+                        <h3>毛衣的吸附现象</h3>
+                        <p><strong>现象：</strong>毛衣脱掉后，内衬吸附在身上</p>
+                        <p><strong>原理：</strong>摩擦使毛衣和内衬带上相反电荷，异性电荷相互吸引</p>
+                        <div class="adhesion-demo" id="adhesionDemo">
+                            <div class="body-outline">
+                                <span>人体</span>
+                            </div>
+                            <div class="clinging-fabric">
+                                <span>内衬(-)</span>
+                            </div>
+                            <div class="attraction-lines"></div>
+                        </div>
+                        <button class="demo-btn" onclick="playAdhesionDemo()">
+                            <i class="fas fa-play"></i>
+                            演示过程
+                        </button>
+                    </div>
+
+                    <div class="example-card">
+                        <div class="example-icon">
+                            <i class="fas fa-hand-paper"></i>
+                        </div>
+                        <h3>触摸门把手的电击</h3>
+                        <p><strong>现象：</strong>干燥天气下触摸金属门把手时被"电"到</p>
+                        <p><strong>原理：</strong>人体与衣物摩擦积累电荷，触摸导体时瞬间放电</p>
+                        <div class="shock-demo" id="shockDemo">
+                            <div class="hand">
+                                <i class="fas fa-hand-paper"></i>
+                                <span class="charge-sign">+</span>
+                            </div>
+                            <div class="discharge-arc"></div>
+                            <div class="door-handle">
+                                <i class="fas fa-door-open"></i>
+                                <span>门把手</span>
+                            </div>
+                        </div>
+                        <button class="demo-btn" onclick="playShockDemo()">
+                            <i class="fas fa-play"></i>
+                            演示过程
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 知识测试部分 -->
+        <section class="quiz-section">
+            <div class="container">
+                <h2 class="section-title">
+                    <i class="fas fa-question-circle"></i>
+                    知识小测试
+                </h2>
+                <div class="quiz-container" id="quizContainer">
+                    <!-- 测试题目将通过JavaScript动态生成 -->
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- 页脚 -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-info">
+                    <h3>《实验设计与教具制作》课程</h3>
+                    <p>小学科学教育专业职业技能课程</p>
+                </div>
+                <div class="footer-links">
+                    <h4>快速导航</h4>
+                    <ul>
+                        <li><a href="#principles">物理原理</a></li>
+                        <li><a href="#experiments">实验方案</a></li>
+                        <li><a href="#simulator">互动模拟</a></li>
+                        <li><a href="#life-examples">生活现象</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024 摩擦起电教学网站. 专为高职院校师范教育设计.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="js/main.js"></script>
+</body>
+</html>
