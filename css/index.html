@@ -1,0 +1,1861 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>摩擦起电 - 互动式物理教学</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #0a0a0f;
+            color: #e2e8f0;
+            overflow-x: hidden;
+            line-height: 1.6;
+        }
+
+        /* 自定义配色 */
+        :root {
+            --primary: #00d4ff;
+            --secondary: #8b5cf6;
+            --accent: #10b981;
+            --warning: #f59e0b;
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #1a1a2e;
+            --bg-tertiary: #16213e;
+            --text-primary: #e2e8f0;
+            --text-secondary: #94a3b8;
+        }
+
+        /* 粒子背景 */
+        #particles-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            opacity: 0.3;
+        }
+
+        /* 霓虹渐变背景 */
+        .neon-gradient {
+            background: linear-gradient(135deg, 
+                rgba(0, 212, 255, 0.1) 0%, 
+                rgba(139, 92, 246, 0.1) 50%, 
+                rgba(16, 185, 129, 0.1) 100%);
+        }
+
+        /* 玻璃效果 */
+        .glass-effect {
+            background: rgba(26, 26, 46, 0.3);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+        }
+
+        /* 霓虹边框 */
+        .neon-border {
+            border: 2px solid transparent;
+            background: linear-gradient(var(--bg-secondary), var(--bg-secondary)) padding-box,
+                        linear-gradient(45deg, var(--primary), var(--secondary)) border-box;
+        }
+
+        /* 悬停发光效果 */
+        .glow-hover {
+            transition: all 0.3s ease;
+        }
+
+        .glow-hover:hover {
+            box-shadow: 0 0 30px rgba(0, 212, 255, 0.3);
+            transform: translateY(-2px);
+        }
+
+        /* 动画类 */
+        .fade-in {
+            opacity: 0;
+            transform: translateY(50px);
+            animation: fadeInUp 1s ease forwards;
+        }
+
+        @keyframes fadeInUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .pulse-glow {
+            animation: pulseGlow 2s ease-in-out infinite alternate;
+        }
+
+        @keyframes pulseGlow {
+            from {
+                box-shadow: 0 0 20px rgba(0, 212, 255, 0.3);
+            }
+            to {
+                box-shadow: 0 0 30px rgba(0, 212, 255, 0.6), 0 0 40px rgba(139, 92, 246, 0.3);
+            }
+        }
+
+        /* 实验卡片样式 */
+        .experiment-card {
+            background: rgba(26, 26, 46, 0.4);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 20px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .experiment-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(0, 212, 255, 0.1), transparent);
+            transition: left 0.5s;
+        }
+
+        .experiment-card:hover::before {
+            left: 100%;
+        }
+
+        .experiment-card:hover {
+            transform: translateY(-5px) scale(1.02);
+            border-color: rgba(0, 212, 255, 0.3);
+            box-shadow: 0 10px 40px rgba(0, 212, 255, 0.2);
+        }
+
+        /* 原子动画容器 */
+        .atom-container {
+            width: 200px;
+            height: 200px;
+            position: relative;
+            margin: 0 auto;
+        }
+
+        .atom-nucleus {
+            width: 20px;
+            height: 20px;
+            background: radial-gradient(circle, #f59e0b, #dc2626);
+            border-radius: 50%;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 0 20px rgba(245, 158, 11, 0.6);
+        }
+
+        .electron-orbit {
+            position: absolute;
+            border: 1px solid rgba(0, 212, 255, 0.3);
+            border-radius: 50%;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        .electron {
+            width: 8px;
+            height: 8px;
+            background: radial-gradient(circle, #00d4ff, #0ea5e9);
+            border-radius: 50%;
+            position: absolute;
+            box-shadow: 0 0 10px rgba(0, 212, 255, 0.8);
+        }
+
+        /* 电子轨道动画 */
+        @keyframes orbit1 {
+            from { transform: rotate(0deg) translateX(50px) rotate(0deg); }
+            to { transform: rotate(360deg) translateX(50px) rotate(-360deg); }
+        }
+
+        @keyframes orbit2 {
+            from { transform: rotate(0deg) translateX(70px) rotate(0deg); }
+            to { transform: rotate(-360deg) translateX(70px) rotate(360deg); }
+        }
+
+        @keyframes orbit3 {
+            from { transform: rotate(0deg) translateX(90px) rotate(0deg); }
+            to { transform: rotate(360deg) translateX(90px) rotate(-360deg); }
+        }
+
+        /* 数据可视化样式 */
+        .charge-meter {
+            width: 200px;
+            height: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .charge-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #dc2626, #f59e0b, #10b981, #0ea5e9, #8b5cf6);
+            border-radius: 10px;
+            transition: width 0.3s ease;
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 1024px) {
+            .container {
+                padding-left: 1rem;
+                padding-right: 1rem;
+            }
+            
+            .atom-container {
+                width: 180px;
+                height: 180px;
+            }
+            
+            .text-5xl {
+                font-size: 3rem;
+            }
+            
+            .text-7xl {
+                font-size: 4rem;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .experiment-card {
+                padding: 15px;
+            }
+            
+            .atom-container {
+                width: 150px;
+                height: 150px;
+            }
+            
+            .text-4xl {
+                font-size: 2rem;
+            }
+            
+            .text-5xl {
+                font-size: 2.5rem;
+            }
+            
+            .text-7xl {
+                font-size: 3rem;
+            }
+            
+            .glass-effect {
+                padding: 1.5rem;
+            }
+            
+            /* 移动端导航 */
+            .nav-item {
+                padding: 8px 16px;
+                font-size: 0.9rem;
+            }
+            
+            /* 移动端原子模型 */
+            .atom-nucleus {
+                width: 16px;
+                height: 16px;
+            }
+            
+            .electron {
+                width: 6px;
+                height: 6px;
+            }
+            
+            /* 移动端按钮 */
+            .pulse-glow {
+                font-size: 0.9rem;
+                padding: 0.75rem 1.5rem;
+            }
+        }
+
+        @media (max-width: 640px) {
+            /* 小屏幕优化 */
+            .text-4xl {
+                font-size: 1.75rem;
+            }
+            
+            .text-2xl {
+                font-size: 1.5rem;
+            }
+            
+            .text-xl {
+                font-size: 1.125rem;
+            }
+            
+            .atom-container {
+                width: 120px;
+                height: 120px;
+            }
+            
+            .glass-effect {
+                padding: 1rem;
+            }
+            
+            .experiment-card {
+                padding: 12px;
+            }
+            
+            /* 移动端隐藏复杂动画 */
+            .electron-orbit {
+                opacity: 0.8;
+            }
+            
+            /* 简化粒子效果 */
+            #particles-canvas {
+                opacity: 0.2;
+            }
+            
+            /* 移动端网格调整 */
+            .grid.lg\\:grid-cols-3 {
+                grid-template-columns: repeat(1, minmax(0, 1fr));
+            }
+            
+            .grid.md\\:grid-cols-2 {
+                grid-template-columns: repeat(1, minmax(0, 1fr));
+            }
+            
+            /* 移动端间距调整 */
+            .space-x-6 > * + * {
+                margin-left: 1rem;
+            }
+            
+            .space-x-8 > * + * {
+                margin-left: 1rem;
+            }
+            
+            /* 移动端导航隐藏桌面版 */
+            .hidden.md\\:flex {
+                display: none !important;
+            }
+        }
+
+        /* 移动端菜单 */
+        .mobile-menu {
+            display: none;
+            position: fixed;
+            top: 70px;
+            left: 0;
+            right: 0;
+            background: rgba(26, 26, 46, 0.95);
+            backdrop-filter: blur(15px);
+            padding: 1rem;
+            z-index: 40;
+        }
+
+        .mobile-menu.active {
+            display: block;
+            animation: slideDown 0.3s ease;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* 触摸优化 */
+        @media (hover: none) and (pointer: coarse) {
+            .glow-hover:hover {
+                transform: none;
+                box-shadow: none;
+            }
+            
+            .experiment-card:hover {
+                transform: none;
+                border-color: rgba(255, 255, 255, 0.1);
+                box-shadow: none;
+            }
+            
+            /* 触摸时的反馈 */
+            .experiment-card:active {
+                transform: scale(0.98);
+                background: rgba(26, 26, 46, 0.6);
+            }
+            
+            button:active {
+                transform: scale(0.95);
+            }
+        }
+
+        /* 减少动画运动 */
+        @media (prefers-reduced-motion: reduce) {
+            .animate-bounce,
+            .animate-pulse,
+            .animate-spin {
+                animation: none;
+            }
+            
+            .pulse-glow {
+                animation: none;
+                box-shadow: 0 0 20px rgba(0, 212, 255, 0.3);
+            }
+            
+            .electron {
+                animation: none;
+                position: relative;
+            }
+        }
+
+        /* 导航样式 */
+        .nav-item {
+            padding: 12px 24px;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .nav-item:hover {
+            background: rgba(0, 212, 255, 0.1);
+            color: var(--primary);
+        }
+
+        .nav-item.active {
+            background: rgba(0, 212, 255, 0.2);
+            color: var(--primary);
+        }
+
+        /* 滚动条样式 */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg, var(--primary), var(--secondary));
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(180deg, var(--secondary), var(--primary));
+        }
+    </style>
+</head>
+<body>
+    <!-- 粒子背景 -->
+    <canvas id="particles-canvas"></canvas>
+    
+    <!-- 导航栏 -->
+    <nav class="fixed top-0 left-0 right-0 z-50 glass-effect">
+        <div class="container mx-auto px-6 py-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center">
+                        <i class="fas fa-bolt text-white"></i>
+                    </div>
+                    <h1 class="text-xl font-bold text-white">摩擦起电</h1>
+                </div>
+                <div class="hidden md:flex items-center space-x-6">
+                    <div class="nav-item active" data-section="principle">原理</div>
+                    <div class="nav-item" data-section="experiments">实验</div>
+                    <div class="nav-item" data-section="phenomena">现象</div>
+                    <div class="nav-item" data-section="interactive">互动</div>
+                </div>
+                <button class="md:hidden text-white" id="mobile-menu-btn">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </div>
+        </div>
+        
+        <!-- 移动端菜单 -->
+        <div class="mobile-menu" id="mobile-menu">
+            <div class="space-y-3">
+                <div class="nav-item mobile-nav-item" data-section="principle">
+                    <i class="fas fa-atom mr-3"></i>原理
+                </div>
+                <div class="nav-item mobile-nav-item" data-section="experiments">
+                    <i class="fas fa-flask mr-3"></i>实验
+                </div>
+                <div class="nav-item mobile-nav-item" data-section="phenomena">
+                    <i class="fas fa-bolt mr-3"></i>现象
+                </div>
+                <div class="nav-item mobile-nav-item" data-section="interactive">
+                    <i class="fas fa-gamepad mr-3"></i>互动
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主要内容 -->
+    <main class="pt-20">
+        <!-- 英雄区域 -->
+        <section id="hero" class="min-h-screen flex items-center justify-center neon-gradient relative">
+            <div class="container mx-auto px-6 text-center">
+                <h1 class="text-5xl md:text-7xl font-bold mb-6 fade-in">
+                    <span class="bg-gradient-to-r from-blue-400 via-purple-500 to-green-400 bg-clip-text text-transparent">
+                        摩擦起电
+                    </span>
+                </h1>
+                <p class="text-xl md:text-2xl text-gray-300 mb-8 fade-in" style="animation-delay: 0.3s;">
+                    探索电荷的奥秘，体验静电的魅力
+                </p>
+                <div class="flex justify-center space-x-6 fade-in" style="animation-delay: 0.6s;">
+                    <button class="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 px-8 py-3 rounded-lg font-semibold transition-all duration-300 glow-hover">
+                        开始探索
+                    </button>
+                    <button class="border-2 border-blue-500 text-blue-400 hover:bg-blue-500 hover:text-white px-8 py-3 rounded-lg font-semibold transition-all duration-300">
+                        观看演示
+                    </button>
+                </div>
+            </div>
+            
+            <!-- 滚动指示器 -->
+            <div class="absolute bottom-8 left-1/2 transform -translate-x-1/2 animate-bounce">
+                <i class="fas fa-chevron-down text-2xl text-blue-400"></i>
+            </div>
+        </section>
+
+        <!-- 物理原理部分 -->
+        <section id="principle" class="py-20 bg-gradient-to-b from-transparent to-gray-900/20">
+            <div class="container mx-auto px-6">
+                <div class="text-center mb-16">
+                    <h2 class="text-4xl font-bold mb-6 bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
+                        物理原理
+                    </h2>
+                    <p class="text-xl text-gray-300 max-w-3xl mx-auto">
+                        不同物质的原子核对核外电子的束缚力大小不同，当两个物体相互摩擦时产生电荷分离现象
+                    </p>
+                </div>
+
+                <div class="grid md:grid-cols-2 gap-12 items-center">
+                    <!-- 原理说明 -->
+                    <div class="space-y-6">
+                        <div class="glass-effect p-6 glow-hover">
+                            <h3 class="text-2xl font-semibold mb-4 text-blue-400">
+                                <i class="fas fa-atom mr-3"></i>电荷转移原理
+                            </h3>
+                            <ul class="space-y-3 text-gray-300">
+                                <li class="flex items-start">
+                                    <i class="fas fa-arrow-right text-green-400 mr-3 mt-1"></i>
+                                    束缚力较小的物体容易失去电子带正电
+                                </li>
+                                <li class="flex items-start">
+                                    <i class="fas fa-arrow-right text-blue-400 mr-3 mt-1"></i>
+                                    束缚力较大的物体容易得到电子带负电
+                                </li>
+                                <li class="flex items-start">
+                                    <i class="fas fa-arrow-right text-purple-400 mr-3 mt-1"></i>
+                                    所带电的数量相同，电性相反
+                                </li>
+                                <li class="flex items-start">
+                                    <i class="fas fa-arrow-right text-yellow-400 mr-3 mt-1"></i>
+                                    带电体具有吸引轻小物体的性质
+                                </li>
+                            </ul>
+                        </div>
+
+                        <div class="glass-effect p-6 glow-hover">
+                            <h3 class="text-xl font-semibold mb-4 text-purple-400">
+                                <i class="fas fa-chart-line mr-3"></i>电荷强度指示器
+                            </h3>
+                            <div class="space-y-4">
+                                <div>
+                                    <div class="flex justify-between mb-2">
+                                        <span class="text-sm text-gray-400">正电荷</span>
+                                        <span class="text-sm text-red-400" id="positive-charge">0</span>
+                                    </div>
+                                    <div class="charge-meter">
+                                        <div class="charge-fill bg-gradient-to-r from-red-500 to-yellow-500" id="positive-meter" style="width: 0%"></div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <div class="flex justify-between mb-2">
+                                        <span class="text-sm text-gray-400">负电荷</span>
+                                        <span class="text-sm text-blue-400" id="negative-charge">0</span>
+                                    </div>
+                                    <div class="charge-meter">
+                                        <div class="charge-fill bg-gradient-to-r from-blue-500 to-cyan-500" id="negative-meter" style="width: 0%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 原子模型动画 -->
+                    <div class="text-center">
+                        <div class="glass-effect p-8 glow-hover">
+                            <h3 class="text-2xl font-semibold mb-6 text-green-400">
+                                <i class="fas fa-sync-alt mr-3"></i>电子转移过程
+                            </h3>
+                            <div class="flex justify-center space-x-8 mb-6">
+                                <!-- 原子A -->
+                                <div class="text-center">
+                                    <h4 class="text-lg mb-4 text-red-400">物质A</h4>
+                                    <div class="atom-container" id="atom-a">
+                                        <div class="atom-nucleus"></div>
+                                        <div class="electron-orbit" style="width: 100px; height: 100px;">
+                                            <div class="electron" style="animation: orbit1 2s linear infinite;"></div>
+                                        </div>
+                                        <div class="electron-orbit" style="width: 140px; height: 140px;">
+                                            <div class="electron" style="animation: orbit2 3s linear infinite;"></div>
+                                        </div>
+                                        <div class="electron-orbit" style="width: 180px; height: 180px;">
+                                            <div class="electron" style="animation: orbit3 4s linear infinite;"></div>
+                                        </div>
+                                    </div>
+                                    <p class="text-sm text-gray-400 mt-4">失去电子 → 正电荷</p>
+                                </div>
+
+                                <!-- 箭头 -->
+                                <div class="flex items-center">
+                                    <i class="fas fa-exchange-alt text-3xl text-yellow-400 animate-pulse"></i>
+                                </div>
+
+                                <!-- 原子B -->
+                                <div class="text-center">
+                                    <h4 class="text-lg mb-4 text-blue-400">物质B</h4>
+                                    <div class="atom-container" id="atom-b">
+                                        <div class="atom-nucleus"></div>
+                                        <div class="electron-orbit" style="width: 100px; height: 100px;">
+                                            <div class="electron" style="animation: orbit1 2s linear infinite reverse;"></div>
+                                        </div>
+                                        <div class="electron-orbit" style="width: 140px; height: 140px;">
+                                            <div class="electron" style="animation: orbit2 3s linear infinite reverse;"></div>
+                                        </div>
+                                        <div class="electron-orbit" style="width: 180px; height: 180px;">
+                                            <div class="electron" style="animation: orbit3 4s linear infinite reverse;"></div>
+                                        </div>
+                                    </div>
+                                    <p class="text-sm text-gray-400 mt-4">获得电子 → 负电荷</p>
+                                </div>
+                            </div>
+
+                            <button id="simulate-btn" class="bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 px-6 py-3 rounded-lg font-semibold transition-all duration-300 pulse-glow">
+                                <i class="fas fa-play mr-2"></i>开始摩擦模拟
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 实验方案部分 -->
+        <section id="experiments" class="py-20 bg-gradient-to-b from-gray-900/20 to-gray-800/30">
+            <div class="container mx-auto px-6">
+                <div class="text-center mb-16">
+                    <h2 class="text-4xl font-bold mb-6 bg-gradient-to-r from-green-400 to-blue-500 bg-clip-text text-transparent">
+                        14个经典实验方案
+                    </h2>
+                    <p class="text-xl text-gray-300 max-w-3xl mx-auto">
+                        多种材料组合，探索不同的摩擦起电现象，让抽象的物理概念变得生动具体
+                    </p>
+                </div>
+
+                <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+                    <!-- 实验方案1-12 -->
+                    <div class="experiment-card" data-experiment="1">
+                        <div class="flex items-center mb-4">
+                            <div class="w-10 h-10 rounded-full bg-gradient-to-r from-red-500 to-pink-500 flex items-center justify-center mr-3">
+                                <span class="text-white font-bold">1</span>
+                            </div>
+                            <h3 class="text-lg font-semibold text-white">丝绸与有机玻璃板</h3>
+                        </div>
+                        <p class="text-gray-300 mb-4">丝绸摩擦有机玻璃板后，玻璃板带负电，能够吸引小纸片</p>
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm text-blue-400">难度: 简单</span>
+                            <i class="fas fa-arrow-right text-purple-400"></i>
+                        </div>
+                    </div>
+
+                    <div class="experiment-card" data-experiment="2">
+                        <div class="flex items-center mb-4">
+                            <div class="w-10 h-10 rounded-full bg-gradient-to-r from-orange-500 to-red-500 flex items-center justify-center mr-3">
+                                <span class="text-white font-bold">2</span>
+                            </div>
+                            <h3 class="text-lg font-semibold text-white">钢笔与头发</h3>
+                        </div>
+                        <p class="text-gray-300 mb-4">用钢笔在头发上摩擦，钢笔获得静电能力，可以吸引轻小物体</p>
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm text-green-400">难度: 简单</span>
+                            <i class="fas fa-arrow-right text-purple-400"></i>
+                        </div>
+                    </div>
+
+                    <div class="experiment-card" data-experiment="3">
+                        <div class="flex items-center mb-4">
+                            <div class="w-10 h-10 rounded-full bg-gradient-to-r from-yellow-500 to-orange-500 flex items-center justify-center mr-3">
+                                <span class="text-white font-bold">3</span>
+                            </div>
+                            <h3 class="text-lg font-semibold text-white">塑料尺与毛织物</h3>
+                        </div>
+                        <p class="text-gray-300 mb-4">塑料尺与毛织物摩擦后产生明显的静电现象，效果显著</p>
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm text-blue-400">难度: 简单</span>
+                            <i class="fas fa-arrow-right text-purple-400"></i>
+                        </div>
+                    </div>
+
+                    <div class="experiment-card" data-experiment="4">
+                        <div class="flex items-center mb-4">
+                            <div class="w-10 h-10 rounded-full bg-gradient-to-r from-green-500 to-teal-500 flex items-center justify-center mr-3">
+                                <span class="text-white font-bold">4</span>
+                            </div>
+                            <h3 class="text-lg font-semibold text-white">手与塑料薄膜</h3>
+                        </div>
+                        <p class="text-gray-300 mb-4">用手摩擦塑料薄膜，薄膜会紧贴手掌，展示静电吸引</p>
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm text-green-400">难度: 简单</span>
+                            <i class="fas fa-arrow-right text-purple-400"></i>
+                        </div>
+                    </div>
+
+                    <div class="experiment-card" data-experiment="5">
+                        <div class="flex items-center mb-4">
+                            <div class="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center mr-3">
+                                <span class="text-white font-bold">5</span>
+                            </div>
+                            <h3 class="text-lg font-semibold text-white">手与泡沫塑料板</h3>
+                        </div>
+                        <p class="text-gray-300 mb-4">泡沫塑料板与手摩擦后带电，可以吸引头发等轻小物体</p>
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm text-blue-400">难度: 简单</span>
+                            <i class="fas fa-arrow-right text-purple-400"></i>
+                        </div>
+                    </div>
+
+                    <div class="experiment-card" data-experiment="6">
+                        <div class="flex items-center mb-4">
+                            <div class="w-10 h-10 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center mr-3">
+                                <span class="text-white font-bold">6</span>
+                            </div>
+                            <h3 class="text-lg font-semibold text-white">化纤布与毛衣</h3>
+                        </div>
+                        <p class="text-gray-300 mb-4">化纤布与毛衣摩擦产生静电，模拟日常穿衣时的静电现象</p>
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm text-yellow-400">难度: 中等</span>
+                            <i class="fas fa-arrow-right text-purple-400"></i>
+                        </div>
+                    </div>
+
+                    <div class="experiment-card" data-experiment="7">
+                        <div class="flex items-center mb-4">
+                            <div class="w-10 h-10 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 flex items-center justify-center mr-3">
+                                <span class="text-white font-bold">7</span>
+                            </div>
+                            <h3 class="text-lg font-semibold text-white">塑料板相互摩擦</h3>
+                        </div>
+                        <p class="text-gray-300 mb-4">普通塑料板和泡沫塑料板摩擦，观察不同材料的起电效果</p>
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm text-yellow-400">难度: 中等</span>
+                            <i class="fas fa-arrow-right text-purple-400"></i>
+                        </div>
+                    </div>
+
+                    <div class="experiment-card" data-experiment="8">
+                        <div class="flex items-center mb-4">
+                            <div class="w-10 h-10 rounded-full bg-gradient-to-r from-teal-500 to-green-500 flex items-center justify-center mr-3">
+                                <span class="text-white font-bold">8</span>
+                            </div>
+                            <h3 class="text-lg font-semibold text-white">有机玻璃与泡沫板</h3>
+                        </div>
+                        <p class="text-gray-300 mb-4">有机玻璃板与泡沫塑料板摩擦，效果明显且安全</p>
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm text-blue-400">难度: 简单</span>
+                            <i class="fas fa-arrow-right text-purple-400"></i>
+                        </div>
+                    </div>
+
+                    <div class="experiment-card" data-experiment="9">
+                        <div class="flex items-center mb-4">
+                            <div class="w-10 h-10 rounded-full bg-gradient-to-r from-pink-500 to-red-500 flex items-center justify-center mr-3">
+                                <span class="text-white font-bold">9</span>
+                            </div>
+                            <h3 class="text-lg font-semibold text-white">有机玻璃与橡胶片</h3>
+                        </div>
+                        <p class="text-gray-300 mb-4">有机玻璃板与橡胶片摩擦，产生较强的静电效应</p>
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm text-yellow-400">难度: 中等</span>
+                            <i class="fas fa-arrow-right text-purple-400"></i>
+                        </div>
+                    </div>
+
+                    <div class="experiment-card" data-experiment="10">
+                        <div class="flex items-center mb-4">
+                            <div class="w-10 h-10 rounded-full bg-gradient-to-r from-cyan-500 to-blue-500 flex items-center justify-center mr-3">
+                                <span class="text-white font-bold">10</span>
+                            </div>
+                            <h3 class="text-lg font-semibold text-white">橡胶片与泡沫板</h3>
+                        </div>
+                        <p class="text-gray-300 mb-4">橡胶片与泡沫塑料板摩擦，观察电荷转移现象</p>
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm text-yellow-400">难度: 中等</span>
+                            <i class="fas fa-arrow-right text-purple-400"></i>
+                        </div>
+                    </div>
+
+                    <div class="experiment-card" data-experiment="11">
+                        <div class="flex items-center mb-4">
+                            <div class="w-10 h-10 rounded-full bg-gradient-to-r from-violet-500 to-purple-500 flex items-center justify-center mr-3">
+                                <span class="text-white font-bold">11</span>
+                            </div>
+                            <h3 class="text-lg font-semibold text-white">塑料梳子与头发</h3>
+                        </div>
+                        <p class="text-gray-300 mb-4">经典的梳头发实验，展示静电让头发"飞舞"的现象</p>
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm text-green-400">难度: 简单</span>
+                            <i class="fas fa-arrow-right text-purple-400"></i>
+                        </div>
+                    </div>
+
+                    <div class="experiment-card" data-experiment="12">
+                        <div class="flex items-center mb-4">
+                            <div class="w-10 h-10 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 flex items-center justify-center mr-3">
+                                <span class="text-white font-bold">12</span>
+                            </div>
+                            <h3 class="text-lg font-semibold text-white">纸片贴墙实验</h3>
+                        </div>
+                        <p class="text-gray-300 mb-4">摩擦后的纸片可以贴在干燥的墙壁上，展示静电吸附力</p>
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm text-green-400">难度: 简单</span>
+                            <i class="fas fa-arrow-right text-purple-400"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 特殊实验详细展示 -->
+                <div class="grid md:grid-cols-2 gap-8">
+                    <!-- 气球吸引易拉罐实验 -->
+                    <div class="glass-effect p-8 glow-hover">
+                        <div class="flex items-center mb-6">
+                            <div class="w-12 h-12 rounded-full bg-gradient-to-r from-red-500 to-pink-500 flex items-center justify-center mr-4">
+                                <span class="text-white font-bold">13</span>
+                            </div>
+                            <h3 class="text-2xl font-semibold text-white">气球吸引易拉罐</h3>
+                        </div>
+                        
+                        <div class="mb-6">
+                            <h4 class="text-lg font-semibold mb-3 text-blue-400">
+                                <i class="fas fa-tools mr-2"></i>实验器材
+                            </h4>
+                            <div class="flex flex-wrap gap-3">
+                                <span class="bg-blue-500/20 text-blue-300 px-3 py-1 rounded-full text-sm">易拉罐</span>
+                                <span class="bg-red-500/20 text-red-300 px-3 py-1 rounded-full text-sm">气球</span>
+                            </div>
+                        </div>
+
+                        <div class="mb-6">
+                            <h4 class="text-lg font-semibold mb-3 text-green-400">
+                                <i class="fas fa-list-ol mr-2"></i>实验步骤
+                            </h4>
+                            <ol class="space-y-3 text-gray-300">
+                                <li class="flex items-start">
+                                    <span class="bg-green-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm mr-3 mt-0.5">1</span>
+                                    向气球内充入适当气体
+                                </li>
+                                <li class="flex items-start">
+                                    <span class="bg-green-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm mr-3 mt-0.5">2</span>
+                                    将充有适当气体的气球放在头发上快速摩擦
+                                </li>
+                                <li class="flex items-start">
+                                    <span class="bg-green-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm mr-3 mt-0.5">3</span>
+                                    把易拉罐放在平整的桌面上，再将与头发摩擦了的气球靠近易拉罐
+                                </li>
+                            </ol>
+                        </div>
+
+                        <div class="mb-6">
+                            <h4 class="text-lg font-semibold mb-3 text-purple-400">
+                                <i class="fas fa-eye mr-2"></i>现象观察
+                            </h4>
+                            <p class="text-gray-300 bg-purple-500/10 p-4 rounded-lg border-l-4 border-purple-500">
+                                会看到易拉罐随气球滚动，展示静电的吸引力
+                            </p>
+                        </div>
+
+                        <button class="w-full bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 px-6 py-3 rounded-lg font-semibold transition-all duration-300 pulse-glow" onclick="startBalloonDemo()">
+                            <i class="fas fa-play mr-2"></i>观看演示动画
+                        </button>
+                    </div>
+
+                    <!-- 有趣的纸片实验 -->
+                    <div class="glass-effect p-8 glow-hover">
+                        <div class="flex items-center mb-6">
+                            <div class="w-12 h-12 rounded-full bg-gradient-to-r from-blue-500 to-cyan-500 flex items-center justify-center mr-4">
+                                <span class="text-white font-bold">14</span>
+                            </div>
+                            <h3 class="text-2xl font-semibold text-white">有趣的纸片实验</h3>
+                        </div>
+                        
+                        <div class="mb-6">
+                            <h4 class="text-lg font-semibold mb-3 text-blue-400">
+                                <i class="fas fa-tools mr-2"></i>实验器材
+                            </h4>
+                            <div class="flex flex-wrap gap-2">
+                                <span class="bg-blue-500/20 text-blue-300 px-3 py-1 rounded-full text-sm">玻璃杯</span>
+                                <span class="bg-yellow-500/20 text-yellow-300 px-3 py-1 rounded-full text-sm">钢针1个</span>
+                                <span class="bg-green-500/20 text-green-300 px-3 py-1 rounded-full text-sm">软木塞1个</span>
+                                <span class="bg-purple-500/20 text-purple-300 px-3 py-1 rounded-full text-sm">剪刀1把</span>
+                                <span class="bg-red-500/20 text-red-300 px-3 py-1 rounded-full text-sm">毛料布</span>
+                                <span class="bg-gray-500/20 text-gray-300 px-3 py-1 rounded-full text-sm">纸片1块</span>
+                            </div>
+                        </div>
+
+                        <div class="mb-6">
+                            <h4 class="text-lg font-semibold mb-3 text-green-400">
+                                <i class="fas fa-list-ol mr-2"></i>实验步骤
+                            </h4>
+                            <ol class="space-y-3 text-gray-300">
+                                <li class="flex items-start">
+                                    <span class="bg-green-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm mr-3 mt-0.5">1</span>
+                                    将钢针插在软木塞上，针尖向上
+                                </li>
+                                <li class="flex items-start">
+                                    <span class="bg-green-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm mr-3 mt-0.5">2</span>
+                                    把纸片剪成一个小箭头，支在针尖上
+                                </li>
+                                <li class="flex items-start">
+                                    <span class="bg-green-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm mr-3 mt-0.5">3</span>
+                                    将玻璃杯口向下扣在软木塞外边
+                                </li>
+                                <li class="flex items-start">
+                                    <span class="bg-green-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm mr-3 mt-0.5">4</span>
+                                    用毛料布摩擦玻璃杯
+                                </li>
+                            </ol>
+                        </div>
+
+                        <div class="mb-6">
+                            <h4 class="text-lg font-semibold mb-3 text-purple-400">
+                                <i class="fas fa-eye mr-2"></i>现象观察
+                            </h4>
+                            <p class="text-gray-300 bg-purple-500/10 p-4 rounded-lg border-l-4 border-purple-500">
+                                摩擦哪里，指针就指向哪里，慢慢移动摩擦，箭头会跟着移动
+                            </p>
+                        </div>
+
+                        <button class="w-full bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 px-6 py-3 rounded-lg font-semibold transition-all duration-300 pulse-glow" onclick="startArrowDemo()">
+                            <i class="fas fa-play mr-2"></i>观看演示动画
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 生活现象部分 -->
+        <section id="phenomena" class="py-20 bg-gradient-to-b from-gray-800/30 to-gray-900/40">
+            <div class="container mx-auto px-6">
+                <div class="text-center mb-16">
+                    <h2 class="text-4xl font-bold mb-6 bg-gradient-to-r from-yellow-400 to-red-500 bg-clip-text text-transparent">
+                        生活中的静电现象
+                    </h2>
+                    <p class="text-xl text-gray-300 max-w-3xl mx-auto">
+                        从日常生活中发现物理原理，让学习更贴近生活实际
+                    </p>
+                </div>
+
+                <div class="max-w-4xl mx-auto">
+                    <div class="glass-effect p-8 glow-hover mb-8">
+                        <div class="flex items-center mb-6">
+                            <div class="w-16 h-16 rounded-full bg-gradient-to-r from-yellow-500 to-orange-500 flex items-center justify-center mr-4">
+                                <i class="fas fa-tshirt text-white text-2xl"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-2xl font-semibold text-white mb-2">脱毛衣时的静电现象</h3>
+                                <p class="text-gray-400">小学生常见问题的科学解答</p>
+                            </div>
+                        </div>
+
+                        <div class="bg-yellow-500/10 border-l-4 border-yellow-500 p-6 rounded-r-lg mb-6">
+                            <h4 class="text-lg font-semibold mb-3 text-yellow-400">
+                                <i class="fas fa-question-circle mr-2"></i>学生问题
+                            </h4>
+                            <p class="text-gray-300 italic">
+                                "在黑暗处脱毛衣时，有时候会看到小火花，并听到噼啪的声音，有时候毛衣脱掉以后，内衬却吸附在身上，这是为什么？"
+                            </p>
+                        </div>
+
+                        <div class="grid md:grid-cols-2 gap-6">
+                            <div class="space-y-6">
+                                <div class="bg-blue-500/10 p-6 rounded-lg border border-blue-500/20">
+                                    <h4 class="text-lg font-semibold mb-3 text-blue-400">
+                                        <i class="fas fa-bolt mr-2"></i>火花和声音的原因
+                                    </h4>
+                                    <ul class="space-y-2 text-gray-300">
+                                        <li class="flex items-start">
+                                            <i class="fas fa-chevron-right text-blue-400 mr-2 mt-1 text-sm"></i>
+                                            毛衣与内衬摩擦产生大量静电
+                                        </li>
+                                        <li class="flex items-start">
+                                            <i class="fas fa-chevron-right text-blue-400 mr-2 mt-1 text-sm"></i>
+                                            电荷积累到一定程度发生放电
+                                        </li>
+                                        <li class="flex items-start">
+                                            <i class="fas fa-chevron-right text-blue-400 mr-2 mt-1 text-sm"></i>
+                                            放电时产生火花和噼啪声
+                                        </li>
+                                        <li class="flex items-start">
+                                            <i class="fas fa-chevron-right text-blue-400 mr-2 mt-1 text-sm"></i>
+                                            黑暗中更容易看到微弱的火花
+                                        </li>
+                                    </ul>
+                                </div>
+
+                                <div class="bg-purple-500/10 p-6 rounded-lg border border-purple-500/20">
+                                    <h4 class="text-lg font-semibold mb-3 text-purple-400">
+                                        <i class="fas fa-magnet mr-2"></i>衣物吸附的原因
+                                    </h4>
+                                    <ul class="space-y-2 text-gray-300">
+                                        <li class="flex items-start">
+                                            <i class="fas fa-chevron-right text-purple-400 mr-2 mt-1 text-sm"></i>
+                                            不同材料带上相反电荷
+                                        </li>
+                                        <li class="flex items-start">
+                                            <i class="fas fa-chevron-right text-purple-400 mr-2 mt-1 text-sm"></i>
+                                            异种电荷相互吸引
+                                        </li>
+                                        <li class="flex items-start">
+                                            <i class="fas fa-chevron-right text-purple-400 mr-2 mt-1 text-sm"></i>
+                                            静电力使内衬紧贴身体
+                                        </li>
+                                        <li class="flex items-start">
+                                            <i class="fas fa-chevron-right text-purple-400 mr-2 mt-1 text-sm"></i>
+                                            干燥环境下静电更明显
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <div>
+                                <div class="bg-green-500/10 p-6 rounded-lg border border-green-500/20 h-full">
+                                    <h4 class="text-lg font-semibold mb-4 text-green-400">
+                                        <i class="fas fa-lightbulb mr-2"></i>互动演示
+                                    </h4>
+                                    <div id="clothing-demo" class="text-center mb-6">
+                                        <div class="relative w-32 h-40 mx-auto mb-4">
+                                            <div id="sweater" class="absolute inset-0 bg-gradient-to-b from-red-400 to-red-600 rounded-lg transform transition-transform duration-1000">
+                                                <div class="absolute inset-2 bg-gradient-to-b from-red-300 to-red-500 rounded opacity-70"></div>
+                                                <div class="absolute top-2 left-2 right-2 h-4 bg-white/20 rounded-full"></div>
+                                                <div class="absolute bottom-2 left-2 right-2 h-8 bg-white/10 rounded"></div>
+                                            </div>
+                                            <div id="underwear" class="absolute inset-x-4 bottom-2 top-8 bg-gradient-to-b from-blue-300 to-blue-500 rounded opacity-80 transform transition-transform duration-1000">
+                                                <div class="absolute inset-1 bg-gradient-to-b from-blue-200 to-blue-400 rounded opacity-50"></div>
+                                            </div>
+                                        </div>
+                                        <div id="sparks-container" class="relative h-12 mb-4">
+                                            <!-- 火花效果将通过JavaScript添加 -->
+                                        </div>
+                                    </div>
+                                    <button id="demo-clothing" class="w-full bg-gradient-to-r from-green-500 to-teal-500 hover:from-green-600 hover:to-teal-600 px-6 py-3 rounded-lg font-semibold transition-all duration-300 pulse-glow">
+                                        <i class="fas fa-play mr-2"></i>模拟脱毛衣过程
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 互动游戏部分 -->
+        <section id="interactive" class="py-20 bg-gradient-to-b from-gray-900/40 to-black/60">
+            <div class="container mx-auto px-6">
+                <div class="text-center mb-16">
+                    <h2 class="text-4xl font-bold mb-6 bg-gradient-to-r from-purple-400 to-pink-500 bg-clip-text text-transparent">
+                        互动学习游戏
+                    </h2>
+                    <p class="text-xl text-gray-300 max-w-3xl mx-auto">
+                        通过游戏化的方式加深对摩擦起电原理的理解
+                    </p>
+                </div>
+
+                <div class="grid md:grid-cols-2 gap-8">
+                    <!-- 材料匹配游戏 -->
+                    <div class="glass-effect p-8 glow-hover">
+                        <h3 class="text-2xl font-semibold mb-6 text-purple-400">
+                            <i class="fas fa-puzzle-piece mr-3"></i>材料匹配挑战
+                        </h3>
+                        <p class="text-gray-300 mb-6">拖拽材料进行匹配，找出最佳的摩擦起电组合！</p>
+                        
+                        <div class="grid grid-cols-3 gap-4 mb-6">
+                            <div class="material-item bg-red-500/20 p-4 rounded-lg text-center cursor-pointer border-2 border-transparent hover:border-red-400 transition-all" data-material="silk">
+                                <i class="fas fa-square text-2xl text-red-400 mb-2"></i>
+                                <p class="text-sm">丝绸</p>
+                            </div>
+                            <div class="material-item bg-blue-500/20 p-4 rounded-lg text-center cursor-pointer border-2 border-transparent hover:border-blue-400 transition-all" data-material="plastic">
+                                <i class="fas fa-square text-2xl text-blue-400 mb-2"></i>
+                                <p class="text-sm">塑料</p>
+                            </div>
+                            <div class="material-item bg-green-500/20 p-4 rounded-lg text-center cursor-pointer border-2 border-transparent hover:border-green-400 transition-all" data-material="rubber">
+                                <i class="fas fa-square text-2xl text-green-400 mb-2"></i>
+                                <p class="text-sm">橡胶</p>
+                            </div>
+                            <div class="material-item bg-yellow-500/20 p-4 rounded-lg text-center cursor-pointer border-2 border-transparent hover:border-yellow-400 transition-all" data-material="glass">
+                                <i class="fas fa-square text-2xl text-yellow-400 mb-2"></i>
+                                <p class="text-sm">玻璃</p>
+                            </div>
+                            <div class="material-item bg-purple-500/20 p-4 rounded-lg text-center cursor-pointer border-2 border-transparent hover:border-purple-400 transition-all" data-material="wool">
+                                <i class="fas fa-square text-2xl text-purple-400 mb-2"></i>
+                                <p class="text-sm">毛料</p>
+                            </div>
+                            <div class="material-item bg-pink-500/20 p-4 rounded-lg text-center cursor-pointer border-2 border-transparent hover:border-pink-400 transition-all" data-material="foam">
+                                <i class="fas fa-square text-2xl text-pink-400 mb-2"></i>
+                                <p class="text-sm">泡沫</p>
+                            </div>
+                        </div>
+
+                        <div id="match-area" class="border-2 border-dashed border-gray-500 p-8 text-center rounded-lg mb-6 min-h-24">
+                            <p class="text-gray-400">将两种材料拖拽到这里进行匹配</p>
+                            <div id="selected-materials" class="flex justify-center space-x-4 mt-4"></div>
+                        </div>
+
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <p class="text-sm text-gray-400">得分: <span id="match-score" class="text-green-400 font-bold">0</span></p>
+                            </div>
+                            <button id="check-match" class="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 px-6 py-2 rounded-lg font-semibold transition-all duration-300 disabled:opacity-50" disabled>
+                                检查匹配
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 电荷平衡游戏 -->
+                    <div class="glass-effect p-8 glow-hover">
+                        <h3 class="text-2xl font-semibold mb-6 text-cyan-400">
+                            <i class="fas fa-balance-scale mr-3"></i>电荷平衡器
+                        </h3>
+                        <p class="text-gray-300 mb-6">调整摩擦强度，观察电荷变化，保持电荷平衡！</p>
+                        
+                        <div class="mb-6">
+                            <div class="flex justify-between items-center mb-4">
+                                <span class="text-red-400">正电荷</span>
+                                <span id="balance-display" class="text-2xl font-mono">0</span>
+                                <span class="text-blue-400">负电荷</span>
+                            </div>
+                            <div class="relative h-6 bg-gray-700 rounded-full overflow-hidden">
+                                <div id="charge-balance-bar" class="absolute top-0 left-1/2 h-full bg-gradient-to-r from-red-500 to-blue-500 transform -translate-x-1/2 transition-all duration-300" style="width: 0%"></div>
+                                <div class="absolute top-0 left-1/2 w-1 h-full bg-white transform -translate-x-1/2"></div>
+                            </div>
+                        </div>
+
+                        <div class="space-y-4 mb-6">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-2">摩擦强度</label>
+                                <input type="range" id="friction-intensity" min="0" max="100" value="0" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer slider">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-2">摩擦时间</label>
+                                <input type="range" id="friction-time" min="0" max="10" value="0" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer slider">
+                            </div>
+                        </div>
+
+                        <div class="text-center">
+                            <button id="start-balance-game" class="bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 px-6 py-3 rounded-lg font-semibold transition-all duration-300 pulse-glow">
+                                <i class="fas fa-gamepad mr-2"></i>开始平衡挑战
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- 页脚 -->
+    <footer class="bg-black/80 py-12">
+        <div class="container mx-auto px-6">
+            <div class="text-center">
+                <div class="mb-8">
+                    <div class="w-16 h-16 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center mx-auto mb-4">
+                        <i class="fas fa-bolt text-white text-2xl"></i>
+                    </div>
+                    <h3 class="text-2xl font-bold text-white mb-2">摩擦起电教学系统</h3>
+                    <p class="text-gray-400">让物理学习变得生动有趣</p>
+                </div>
+                
+                <div class="border-t border-gray-700 pt-6">
+                    <p class="text-gray-400 mb-2">
+                        © 2024 实验设计与教具制作课程教学资源
+                    </p>
+                    <p class="text-lg font-semibold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
+                        作者：蒋佳佳
+                    </p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- JavaScript -->
+    <script>
+        // 粒子背景动画
+        class ParticleSystem {
+            constructor() {
+                this.canvas = document.getElementById('particles-canvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.particles = [];
+                this.mousePos = { x: 0, y: 0 };
+                
+                this.resizeCanvas();
+                this.createParticles();
+                this.animate();
+                
+                window.addEventListener('resize', () => this.resizeCanvas());
+                window.addEventListener('mousemove', (e) => {
+                    this.mousePos.x = e.clientX;
+                    this.mousePos.y = e.clientY;
+                });
+            }
+            
+            resizeCanvas() {
+                this.canvas.width = window.innerWidth;
+                this.canvas.height = window.innerHeight;
+            }
+            
+            createParticles() {
+                const numParticles = Math.floor((this.canvas.width * this.canvas.height) / 15000);
+                
+                for (let i = 0; i < numParticles; i++) {
+                    this.particles.push({
+                        x: Math.random() * this.canvas.width,
+                        y: Math.random() * this.canvas.height,
+                        vx: (Math.random() - 0.5) * 0.5,
+                        vy: (Math.random() - 0.5) * 0.5,
+                        size: Math.random() * 2 + 1,
+                        opacity: Math.random() * 0.5 + 0.2,
+                        color: `hsl(${Math.random() * 60 + 180}, 70%, 60%)`
+                    });
+                }
+            }
+            
+            animate() {
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                
+                this.particles.forEach((particle, index) => {
+                    // 更新位置
+                    particle.x += particle.vx;
+                    particle.y += particle.vy;
+                    
+                    // 边界检测
+                    if (particle.x < 0 || particle.x > this.canvas.width) particle.vx *= -1;
+                    if (particle.y < 0 || particle.y > this.canvas.height) particle.vy *= -1;
+                    
+                    // 鼠标交互
+                    const dx = this.mousePos.x - particle.x;
+                    const dy = this.mousePos.y - particle.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    
+                    if (distance < 100) {
+                        const force = (100 - distance) / 100;
+                        particle.vx += (dx / distance) * force * 0.01;
+                        particle.vy += (dy / distance) * force * 0.01;
+                    }
+                    
+                    // 绘制粒子
+                    this.ctx.beginPath();
+                    this.ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+                    this.ctx.fillStyle = particle.color;
+                    this.ctx.globalAlpha = particle.opacity;
+                    this.ctx.fill();
+                    
+                    // 连接线
+                    this.particles.forEach((otherParticle, otherIndex) => {
+                        if (index !== otherIndex) {
+                            const dx = particle.x - otherParticle.x;
+                            const dy = particle.y - otherParticle.y;
+                            const distance = Math.sqrt(dx * dx + dy * dy);
+                            
+                            if (distance < 80) {
+                                this.ctx.beginPath();
+                                this.ctx.moveTo(particle.x, particle.y);
+                                this.ctx.lineTo(otherParticle.x, otherParticle.y);
+                                this.ctx.strokeStyle = particle.color;
+                                this.ctx.globalAlpha = (80 - distance) / 80 * 0.2;
+                                this.ctx.lineWidth = 0.5;
+                                this.ctx.stroke();
+                            }
+                        }
+                    });
+                });
+                
+                this.ctx.globalAlpha = 1;
+                requestAnimationFrame(() => this.animate());
+            }
+        }
+
+        // 摩擦模拟
+        class FrictionSimulation {
+            constructor() {
+                this.isSimulating = false;
+                this.setupEventListeners();
+            }
+            
+            setupEventListeners() {
+                const simulateBtn = document.getElementById('simulate-btn');
+                simulateBtn.addEventListener('click', () => this.startSimulation());
+            }
+            
+            startSimulation() {
+                if (this.isSimulating) return;
+                
+                this.isSimulating = true;
+                const btn = document.getElementById('simulate-btn');
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>模拟中...';
+                btn.disabled = true;
+                
+                // 电荷积累动画
+                this.animateChargeBuildup();
+                
+                setTimeout(() => {
+                    this.isSimulating = false;
+                    btn.innerHTML = '<i class="fas fa-play mr-2"></i>开始摩擦模拟';
+                    btn.disabled = false;
+                    this.resetMeters();
+                }, 3000);
+            }
+            
+            animateChargeBuildup() {
+                let progress = 0;
+                const interval = setInterval(() => {
+                    progress += 2;
+                    
+                    document.getElementById('positive-charge').textContent = `+${Math.floor(progress * 0.8)}`;
+                    document.getElementById('negative-charge').textContent = `-${Math.floor(progress * 0.8)}`;
+                    document.getElementById('positive-meter').style.width = `${Math.min(progress, 100)}%`;
+                    document.getElementById('negative-meter').style.width = `${Math.min(progress, 100)}%`;
+                    
+                    if (progress >= 100) {
+                        clearInterval(interval);
+                    }
+                }, 50);
+            }
+            
+            resetMeters() {
+                setTimeout(() => {
+                    document.getElementById('positive-charge').textContent = '0';
+                    document.getElementById('negative-charge').textContent = '0';
+                    document.getElementById('positive-meter').style.width = '0%';
+                    document.getElementById('negative-meter').style.width = '0%';
+                }, 1000);
+            }
+        }
+
+        // 导航功能
+        class Navigation {
+            constructor() {
+                this.isMobileMenuOpen = false;
+                this.setupEventListeners();
+            }
+            
+            setupEventListeners() {
+                // 桌面端导航
+                const navItems = document.querySelectorAll('.nav-item');
+                navItems.forEach(item => {
+                    item.addEventListener('click', () => {
+                        const section = item.getAttribute('data-section');
+                        this.navigateToSection(section);
+                        this.setActiveItem(item);
+                        
+                        // 如果是移动端菜单项，关闭菜单
+                        if (item.classList.contains('mobile-nav-item')) {
+                            this.closeMobileMenu();
+                        }
+                    });
+                });
+                
+                // 移动端菜单切换
+                const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+                if (mobileMenuBtn) {
+                    mobileMenuBtn.addEventListener('click', () => {
+                        this.toggleMobileMenu();
+                    });
+                }
+                
+                // 点击外部关闭移动端菜单
+                document.addEventListener('click', (e) => {
+                    const mobileMenu = document.getElementById('mobile-menu');
+                    const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+                    
+                    if (this.isMobileMenuOpen && 
+                        !mobileMenu.contains(e.target) && 
+                        !mobileMenuBtn.contains(e.target)) {
+                        this.closeMobileMenu();
+                    }
+                });
+            }
+            
+            navigateToSection(section) {
+                const element = document.getElementById(section);
+                if (element) {
+                    element.scrollIntoView({ behavior: 'smooth' });
+                }
+            }
+            
+            setActiveItem(activeItem) {
+                document.querySelectorAll('.nav-item').forEach(item => {
+                    item.classList.remove('active');
+                });
+                activeItem.classList.add('active');
+                
+                // 同步桌面端和移动端的激活状态
+                const section = activeItem.getAttribute('data-section');
+                document.querySelectorAll(`[data-section="${section}"]`).forEach(item => {
+                    item.classList.add('active');
+                });
+            }
+            
+            toggleMobileMenu() {
+                const mobileMenu = document.getElementById('mobile-menu');
+                const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+                const icon = mobileMenuBtn.querySelector('i');
+                
+                if (this.isMobileMenuOpen) {
+                    this.closeMobileMenu();
+                } else {
+                    mobileMenu.classList.add('active');
+                    icon.className = 'fas fa-times';
+                    this.isMobileMenuOpen = true;
+                }
+            }
+            
+            closeMobileMenu() {
+                const mobileMenu = document.getElementById('mobile-menu');
+                const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+                const icon = mobileMenuBtn?.querySelector('i');
+                
+                mobileMenu.classList.remove('active');
+                if (icon) {
+                    icon.className = 'fas fa-bars';
+                }
+                this.isMobileMenuOpen = false;
+            }
+        }
+
+        // 实验演示动画
+        class ExperimentDemos {
+            constructor() {
+                this.setupEventListeners();
+            }
+            
+            setupEventListeners() {
+                // 实验卡片点击事件
+                document.querySelectorAll('.experiment-card').forEach(card => {
+                    card.addEventListener('click', () => {
+                        this.showExperimentDetail(card.dataset.experiment);
+                    });
+                });
+                
+                // 脱毛衣演示
+                document.getElementById('demo-clothing')?.addEventListener('click', () => {
+                    this.startClothingDemo();
+                });
+            }
+            
+            showExperimentDetail(experimentId) {
+                // 为每个实验添加详细说明弹窗
+                const experiments = {
+                    '1': {
+                        title: '丝绸与有机玻璃板摩擦',
+                        description: '丝绸摩擦有机玻璃板，玻璃板失去电子带负电，丝绸带正电。',
+                        tips: '实验效果明显，适合课堂演示。'
+                    },
+                    '2': {
+                        title: '钢笔与头发摩擦',
+                        description: '钢笔与头发摩擦后获得静电，能够吸引小纸片等轻小物体。',
+                        tips: '日常生活中最容易重现的实验。'
+                    }
+                    // 可以继续添加其他实验的详细信息
+                };
+                
+                const experiment = experiments[experimentId];
+                if (experiment) {
+                    this.showModal(experiment);
+                }
+            }
+            
+            showModal(experiment) {
+                // 创建模态框显示实验详情
+                const modal = document.createElement('div');
+                modal.className = 'fixed inset-0 bg-black/80 flex items-center justify-center z-50';
+                modal.innerHTML = `
+                    <div class="glass-effect p-8 max-w-md mx-4 relative">
+                        <button class="absolute top-4 right-4 text-white hover:text-red-400" onclick="this.parentElement.parentElement.remove()">
+                            <i class="fas fa-times"></i>
+                        </button>
+                        <h3 class="text-xl font-bold text-white mb-4">${experiment.title}</h3>
+                        <p class="text-gray-300 mb-4">${experiment.description}</p>
+                        <p class="text-blue-400 text-sm">${experiment.tips}</p>
+                    </div>
+                `;
+                document.body.appendChild(modal);
+            }
+            
+            startClothingDemo() {
+                const sweater = document.getElementById('sweater');
+                const underwear = document.getElementById('underwear');
+                const sparksContainer = document.getElementById('sparks-container');
+                const btn = document.getElementById('demo-clothing');
+                
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>演示中...';
+                
+                // 创建火花效果
+                this.createSparks(sparksContainer);
+                
+                // 毛衣向上移动动画
+                setTimeout(() => {
+                    sweater.style.transform = 'translateY(-100px) rotate(-10deg)';
+                }, 500);
+                
+                // 内衬吸附效果
+                setTimeout(() => {
+                    underwear.style.transform = 'translateY(-20px) scale(1.1)';
+                    underwear.style.boxShadow = '0 0 20px rgba(59, 130, 246, 0.5)';
+                }, 1500);
+                
+                // 重置动画
+                setTimeout(() => {
+                    sweater.style.transform = '';
+                    underwear.style.transform = '';
+                    underwear.style.boxShadow = '';
+                    sparksContainer.innerHTML = '';
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-play mr-2"></i>模拟脱毛衣过程';
+                }, 4000);
+            }
+            
+            createSparks(container) {
+                container.innerHTML = '';
+                for (let i = 0; i < 8; i++) {
+                    const spark = document.createElement('div');
+                    spark.className = 'absolute w-1 h-1 bg-yellow-400 rounded-full animate-ping';
+                    spark.style.left = Math.random() * 100 + '%';
+                    spark.style.top = Math.random() * 100 + '%';
+                    spark.style.animationDelay = Math.random() * 2 + 's';
+                    container.appendChild(spark);
+                }
+            }
+        }
+
+        // 气球实验演示
+        function startBalloonDemo() {
+            const btn = event.target;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>演示中...';
+            
+            // 创建简单的演示动画
+            const demoContainer = btn.parentElement;
+            const demoDiv = document.createElement('div');
+            demoDiv.className = 'mt-6 p-4 bg-blue-500/10 rounded-lg border border-blue-500/20';
+            demoDiv.innerHTML = `
+                <div class="flex items-center justify-center space-x-8">
+                    <div class="text-center">
+                        <div class="w-16 h-16 bg-red-500 rounded-full mb-2 animate-bounce" style="animation-delay: 0s;"></div>
+                        <p class="text-sm text-red-400">气球</p>
+                    </div>
+                    <div class="text-center">
+                        <i class="fas fa-arrow-right text-2xl text-yellow-400 animate-pulse"></i>
+                    </div>
+                    <div class="text-center">
+                        <div class="w-12 h-16 bg-gray-400 rounded mb-2 transform transition-transform duration-2000" id="demo-can"></div>
+                        <p class="text-sm text-gray-400">易拉罐</p>
+                    </div>
+                </div>
+            `;
+            demoContainer.appendChild(demoDiv);
+            
+            // 易拉罐滚动动画
+            setTimeout(() => {
+                document.getElementById('demo-can').style.transform = 'translateX(20px)';
+            }, 1000);
+            
+            // 清理演示
+            setTimeout(() => {
+                demoDiv.remove();
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-play mr-2"></i>观看演示动画';
+            }, 4000);
+        }
+
+        // 纸片实验演示
+        function startArrowDemo() {
+            const btn = event.target;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>演示中...';
+            
+            const demoContainer = btn.parentElement;
+            const demoDiv = document.createElement('div');
+            demoDiv.className = 'mt-6 p-4 bg-cyan-500/10 rounded-lg border border-cyan-500/20';
+            demoDiv.innerHTML = `
+                <div class="text-center">
+                    <div class="relative w-32 h-32 mx-auto mb-4">
+                        <div class="w-24 h-24 border-2 border-gray-400 rounded-full mx-auto mb-2"></div>
+                        <div class="absolute top-1/2 left-1/2 w-8 h-1 bg-white transform -translate-x-1/2 -translate-y-1/2 transition-transform duration-1000" id="demo-arrow"></div>
+                    </div>
+                    <p class="text-sm text-cyan-400">箭头跟随摩擦位置转动</p>
+                </div>
+            `;
+            demoContainer.appendChild(demoDiv);
+            
+            // 箭头旋转动画
+            let rotation = 0;
+            const arrowInterval = setInterval(() => {
+                rotation += 45;
+                document.getElementById('demo-arrow').style.transform = `translate(-50%, -50%) rotate(${rotation}deg)`;
+            }, 500);
+            
+            // 清理演示
+            setTimeout(() => {
+                clearInterval(arrowInterval);
+                demoDiv.remove();
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-play mr-2"></i>观看演示动画';
+            }, 4000);
+        }
+
+        // 互动游戏系统
+        class InteractiveGames {
+            constructor() {
+                this.matchScore = 0;
+                this.selectedMaterials = [];
+                this.gameActive = false;
+                this.setupEventListeners();
+            }
+            
+            setupEventListeners() {
+                // 材料匹配游戏
+                document.querySelectorAll('.material-item').forEach(item => {
+                    item.addEventListener('click', () => this.selectMaterial(item));
+                });
+                
+                document.getElementById('check-match')?.addEventListener('click', () => {
+                    this.checkMatch();
+                });
+                
+                // 电荷平衡游戏
+                document.getElementById('friction-intensity')?.addEventListener('input', (e) => {
+                    this.updateChargeBalance();
+                });
+                
+                document.getElementById('friction-time')?.addEventListener('input', (e) => {
+                    this.updateChargeBalance();
+                });
+                
+                document.getElementById('start-balance-game')?.addEventListener('click', () => {
+                    this.startBalanceGame();
+                });
+            }
+            
+            selectMaterial(item) {
+                const material = item.dataset.material;
+                
+                if (this.selectedMaterials.includes(material)) return;
+                if (this.selectedMaterials.length >= 2) {
+                    this.selectedMaterials = [];
+                    document.getElementById('selected-materials').innerHTML = '';
+                    document.querySelectorAll('.material-item').forEach(el => {
+                        el.classList.remove('border-white');
+                    });
+                }
+                
+                this.selectedMaterials.push(material);
+                item.classList.add('border-white');
+                
+                // 更新选中材料显示
+                const container = document.getElementById('selected-materials');
+                const materialDiv = document.createElement('div');
+                materialDiv.className = 'bg-white/10 px-3 py-1 rounded text-sm';
+                materialDiv.textContent = item.querySelector('p').textContent;
+                container.appendChild(materialDiv);
+                
+                // 检查是否可以进行匹配
+                if (this.selectedMaterials.length === 2) {
+                    document.getElementById('check-match').disabled = false;
+                }
+            }
+            
+            checkMatch() {
+                const goodMatches = [
+                    ['silk', 'glass'],
+                    ['plastic', 'wool'],
+                    ['rubber', 'foam'],
+                    ['glass', 'rubber']
+                ];
+                
+                const isGoodMatch = goodMatches.some(match => 
+                    match.includes(this.selectedMaterials[0]) && match.includes(this.selectedMaterials[1])
+                );
+                
+                if (isGoodMatch) {
+                    this.matchScore += 10;
+                    this.showMatchResult('成功！这是一个很好的摩擦起电组合！', 'success');
+                } else {
+                    this.showMatchResult('这个组合的起电效果不明显，试试其他组合吧！', 'warning');
+                }
+                
+                document.getElementById('match-score').textContent = this.matchScore;
+                
+                // 重置选择
+                this.selectedMaterials = [];
+                document.getElementById('selected-materials').innerHTML = '';
+                document.querySelectorAll('.material-item').forEach(el => {
+                    el.classList.remove('border-white');
+                });
+                document.getElementById('check-match').disabled = true;
+            }
+            
+            showMatchResult(message, type) {
+                const resultDiv = document.createElement('div');
+                resultDiv.className = `mt-4 p-3 rounded-lg text-center ${type === 'success' ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'}`;
+                resultDiv.textContent = message;
+                
+                document.getElementById('match-area').appendChild(resultDiv);
+                
+                setTimeout(() => {
+                    resultDiv.remove();
+                }, 3000);
+            }
+            
+            updateChargeBalance() {
+                const intensity = document.getElementById('friction-intensity')?.value || 0;
+                const time = document.getElementById('friction-time')?.value || 0;
+                
+                const charge = (intensity * time) / 100;
+                const balance = (Math.sin(charge * Math.PI) * 50).toFixed(1);
+                
+                document.getElementById('balance-display').textContent = balance > 0 ? `+${balance}` : balance;
+                
+                const barWidth = Math.abs(balance);
+                const bar = document.getElementById('charge-balance-bar');
+                if (bar) {
+                    bar.style.width = `${barWidth}%`;
+                    bar.style.background = balance > 0 ? 
+                        'linear-gradient(90deg, #ef4444, #f59e0b)' : 
+                        'linear-gradient(90deg, #3b82f6, #06b6d4)';
+                }
+            }
+            
+            startBalanceGame() {
+                const btn = document.getElementById('start-balance-game');
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>游戏中...';
+                
+                this.gameActive = true;
+                let timeLeft = 30;
+                
+                const gameInterval = setInterval(() => {
+                    timeLeft--;
+                    btn.innerHTML = `<i class="fas fa-clock mr-2"></i>剩余时间: ${timeLeft}s`;
+                    
+                    if (timeLeft <= 0) {
+                        clearInterval(gameInterval);
+                        this.endBalanceGame();
+                    }
+                }, 1000);
+            }
+            
+            endBalanceGame() {
+                this.gameActive = false;
+                const btn = document.getElementById('start-balance-game');
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-gamepad mr-2"></i>开始平衡挑战';
+                
+                // 显示游戏结果
+                alert('游戏结束！你对电荷平衡有了更好的理解！');
+            }
+        }
+
+        // 滚动动画
+        class ScrollAnimations {
+            constructor() {
+                this.observeElements();
+            }
+            
+            observeElements() {
+                const observer = new IntersectionObserver((entries) => {
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting) {
+                            entry.target.classList.add('animate-fade-in-up');
+                        }
+                    });
+                }, { threshold: 0.1 });
+                
+                document.querySelectorAll('.experiment-card, .glass-effect').forEach(el => {
+                    observer.observe(el);
+                });
+            }
+        }
+
+        // 添加CSS动画类
+        const style = document.createElement('style');
+        style.textContent = `
+            .animate-fade-in-up {
+                animation: fadeInUp 0.8s ease forwards;
+            }
+            
+            @keyframes fadeInUp {
+                from {
+                    opacity: 0;
+                    transform: translateY(30px);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
+            
+            .slider::-webkit-slider-thumb {
+                appearance: none;
+                height: 20px;
+                width: 20px;
+                border-radius: 50%;
+                background: linear-gradient(45deg, #00d4ff, #8b5cf6);
+                cursor: pointer;
+                box-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+            }
+            
+            .slider::-moz-range-thumb {
+                height: 20px;
+                width: 20px;
+                border-radius: 50%;
+                background: linear-gradient(45deg, #00d4ff, #8b5cf6);
+                cursor: pointer;
+                border: none;
+                box-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+            }
+        `;
+        document.head.appendChild(style);
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', () => {
+            new ParticleSystem();
+            new FrictionSimulation();
+            new Navigation();
+            new ExperimentDemos();
+            new InteractiveGames();
+            new ScrollAnimations();
+            
+            // GSAP动画
+            gsap.from('.fade-in', {
+                duration: 1,
+                y: 50,
+                opacity: 0,
+                stagger: 0.2,
+                ease: "power2.out"
+            });
+        });
+    </script>
+</body>
+</html>
